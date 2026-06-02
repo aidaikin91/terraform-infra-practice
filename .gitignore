@@ -1,0 +1,8 @@
+ # Never commit these
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars          # if they contain secrets
+crash.log
+override.tf
+.terraform.lock.hcl   # optional — many teams DO commit this; see note below
