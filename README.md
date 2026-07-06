@@ -4,13 +4,19 @@ A learning project that provisions a basic web application infrastructure on AWS
 
 ## Architecture
 
+**HTTP only (default):**
+```
+Internet → HTTP (80) → ALB → EC2 instances (Apache)
+                        ↕
+                Public Subnet 1 (us-east-1a)
+                Public Subnet 2 (us-east-1b)
+                        ↕
+                VPC (10.0.0.0/16)
+```
+
+**With HTTPS enabled (`enable_https = true`):**
 ```
 Internet → HTTP (80) → 301 redirect → HTTPS (443) → ALB → EC2 instances (Apache)
-                                                      ↕
-                                              Public Subnet 1 (us-east-1a)
-                                              Public Subnet 2 (us-east-1b)
-                                                      ↕
-                                              VPC (10.0.0.0/16)
 ```
 
 ## Resources Created
@@ -21,19 +27,25 @@ Internet → HTTP (80) → 301 redirect → HTTPS (443) → ALB → EC2 instance
 | **Subnets** | 2 public subnets across availability zones |
 | **Internet Gateway** | Internet access for public subnets |
 | **Route Table** | Public route table with internet gateway route |
-| **ALB** | Application Load Balancer with HTTP → HTTPS redirect |
-| **ACM Certificate** | SSL/TLS certificate with Route 53 DNS validation |
-| **Route 53 Record** | A record pointing domain to ALB |
+| **ALB** | Application Load Balancer (HTTP, or HTTP→HTTPS redirect when HTTPS enabled) |
 | **EC2 Instances** | 2x Amazon Linux 2023 (t2.micro) running Apache |
-| **Security Groups** | ALB (HTTP/HTTPS inbound), EC2 (HTTP from ALB, SSH) |
+| **Security Groups** | ALB (HTTP inbound, HTTPS when enabled), EC2 (HTTP from ALB, SSH) |
 | **Key Pair** | RSA 4096-bit SSH key pair |
+
+When `enable_https = true`, these additional resources are created:
+
+| Resource | Description |
+|---|---|
+| **ACM Certificate** | SSL/TLS certificate with Route 53 DNS validation |
+| **Route 53 Records** | Certificate validation + A record pointing domain to ALB |
+| **HTTPS Listener** | ALB listener on port 443 with TLS 1.3 |
 
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5.0
 - AWS CLI configured with valid credentials
-- A domain name managed in Route 53
 - An S3 bucket for remote state (`terraform-infra-practice-state`)
+- (Optional) A domain name managed in Route 53 — required only if enabling HTTPS
 
 ## Setup
 
@@ -42,9 +54,10 @@ Internet → HTTP (80) → 301 redirect → HTTPS (443) → ALB → EC2 instance
    aws s3 mb s3://terraform-infra-practice-state --region us-east-1
    ```
 
-2. **Update `terraform.tfvars`** with your domain name:
+2. **Update `terraform.tfvars`** as needed. To enable HTTPS:
    ```hcl
-   domain_name = "yourdomain.com"
+   enable_https = true
+   domain_name  = "yourdomain.com"
    ```
 
 3. **Initialize, plan, and apply:**
@@ -64,7 +77,8 @@ Internet → HTTP (80) → 301 redirect → HTTPS (443) → ALB → EC2 instance
 | `public_subnet_cidrs` | Public subnet CIDRs | `["10.0.1.0/24", "10.0.2.0/24"]` |
 | `instance_type` | EC2 instance type | `t2.micro` |
 | `instance_count` | Number of EC2 instances | `2` |
-| `domain_name` | Domain for ACM certificate | — (required) |
+| `enable_https` | Enable HTTPS with ACM + Route 53 | `false` |
+| `domain_name` | Domain for ACM certificate | `""` |
 
 ## Outputs
 
@@ -77,7 +91,7 @@ Internet → HTTP (80) → 301 redirect → HTTPS (443) → ALB → EC2 instance
 | `ec2_public_ips` | EC2 public IPs |
 | `private_key_file` | Path to SSH private key |
 | `ssh_command` | Example SSH command |
-| `website_url` | HTTPS URL for the web app |
+| `website_url` | HTTP or HTTPS URL depending on config |
 
 ## SSH Access
 
@@ -90,4 +104,5 @@ ssh -i terraform-infra-practice-key.pem ec2-user@<instance-public-ip>
 
 ```bash
 terraform destroy
+aws s3 rb s3://terraform-infra-practice-state --force
 ```
