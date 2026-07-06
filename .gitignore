@@ -4,5 +4,4 @@
 *.tfstate.*
 crash.log
 override.tf
-.terraform.lock.hcl   # optional — many teams DO commit this; see note below
 *.pem                 # SSH private keys
