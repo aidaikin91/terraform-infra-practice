@@ -34,6 +34,6 @@ output "ssh_command" {
 }
 
 output "website_url" {
-  description = "HTTPS URL for the web app"
-  value       = "https://${var.domain_name}"
+  description = "URL for the web app"
+  value       = var.enable_https ? "https://${var.domain_name}" : "http://${aws_lb.main.dns_name}"
 }

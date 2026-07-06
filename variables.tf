@@ -34,7 +34,14 @@ variable "instance_count" {
   default     = 2
 }
 
+variable "enable_https" {
+  description = "Enable HTTPS with ACM certificate and Route 53 DNS"
+  type        = bool
+  default     = false
+}
+
 variable "domain_name" {
-  description = "Domain name for the ACM certificate (e.g. example.com)"
+  description = "Domain name for the ACM certificate (e.g. example.com). Required if enable_https is true."
   type        = string
+  default     = ""
 }
